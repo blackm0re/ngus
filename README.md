@@ -163,7 +163,7 @@ Simeon Simeonov - sgs @ LiberaChat
 
 ## [License](https://github.com/blackm0re/ngus/blob/master/LICENSE)
 
-Copyright (c) 2021, Simeon Simeonov
+Copyright (c) 2021-2023 Simeon Simeonov
 All rights reserved.
 
 [Licensed](https://github.com/blackm0re/ngus/blob/master/LICENSE) under the

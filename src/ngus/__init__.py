@@ -1,5 +1,5 @@
-# ngus v1.0
-# Copyright (C) 2021 Simeon Simeonov
+# ngus
+# Copyright (C) 2021-2023 Simeon Simeonov
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ import http.server
 import pathlib
 
 __author__ = 'Simeon Simeonov'
-__version__ = '1.0'
+__version__ = '2.0'
 __license__ = 'GPL3'
 
 DEFAULT_UPLOAD_PAGE = bytes('''<!DOCTYPE html>
