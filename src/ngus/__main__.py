@@ -18,6 +18,7 @@ import argparse
 import base64
 import logging
 import pathlib
+import ssl
 import sys
 
 import ngus
@@ -31,75 +32,129 @@ def eprint(*arg, **kwargs):
 def main(inargs=None):
     """main entry point"""
     parser = argparse.ArgumentParser(
-        description='The following options are available')
+        description='The following options are available'
+    )
     parser.add_argument(
-        '-b', '--basic-auth',
+        '-b',
+        '--basic-auth',
         metavar='<username:password>',
         type=str,
         dest='basic_auth',
         default='',
-        help=('Require Basic auth from the client in order to POST a file '
-              '(default: No basic auth required)'))
+        help=(
+            'Require Basic auth from the client in order to POST a file '
+            '(default: No basic auth required)'
+        ),
+    )
     parser.add_argument(
-        '-H', '--hostname',
+        '-H',
+        '--hostname',
         metavar='<hostname>',
         type=str,
         dest='hostname',
         default='127.0.0.1',
-        help='ngus server IP / hostname (default: 127.0.0.1)')
+        help='ngus server IP / hostname (default: 127.0.0.1)',
+    )
     parser.add_argument(
-        '-i', '--input-name',
+        '-c',
+        '--certfile',
+        metavar='<certfile>',
+        type=pathlib.Path,
+        dest='certfile',
+        default=None,
+        help=(
+            'Certfile (PEM) for TLS/SSL connections '
+            '(default: SSL/TLS disabled)'
+        ),
+    )
+    parser.add_argument(
+        '-i',
+        '--input-name',
         metavar='<name>',
         type=str,
         dest='input_name',
         default='ufile',
-        help='The name of the form input field (default: "ufile")')
+        help='The name of the form input field (default: "ufile")',
+    )
     parser.add_argument(
-        '-p', '--port',
+        '-k',
+        '--keyfile',
+        metavar='<keyfile>',
+        type=pathlib.Path,
+        dest='keyfile',
+        default=None,
+        help='Keyfile for TLS/SSL connections (default: SSL/TLS disabled)',
+    )
+    parser.add_argument(
+        '-p',
+        '--port',
         metavar='<port>',
         type=int,
         dest='port',
         default=8080,
-        help='ngus server port (default: 8080)')
+        help='ngus server port (default: 8080)',
+    )
     parser.add_argument(
-        '-u', '--upload-dir',
+        '-u',
+        '--upload-dir',
         metavar='<dir>',
         type=pathlib.Path,
         dest='upload_dir',
         default=pathlib.Path.cwd(),
-        help='ngus server upload dir (default: CWD)')
+        help='ngus server upload dir (default: CWD)',
+    )
     parser.add_argument(
-        '-U', '--upload-page',
+        '-U',
+        '--upload-page',
         metavar='<filename>',
         type=argparse.FileType('rb'),
         dest='upload_page',
         default=None,
-        help='Alternative upload page (form) to display (default: None)')
+        help='Alternative upload page (form) to display (default: None)',
+    )
     parser.add_argument(
-        '-v', '--version',
+        '-v',
+        '--version',
         action='version',
         version=f'%(prog)s {ngus.__version__}',
-        help='Display program-version and exit')
+        help='Display program-version and exit',
+    )
     args = parser.parse_args(inargs)
     try:
-        logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
-                            level=logging.DEBUG)
+        logging.basicConfig(
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            level=logging.DEBUG,
+        )
         logger = logging.getLogger('ngus')
         logger.info('ngus starting')
         server_params = {
             'input_name': args.input_name,
-            'upload_dir': args.upload_dir
+            'upload_dir': args.upload_dir,
         }
         if args.upload_page is not None:
             server_params['upload_page'] = args.upload_page.read()
         if args.basic_auth and len(args.basic_auth.split(':')) == 2:
             server_params['basic_auth'] = base64.b64encode(
-                args.basic_auth.strip().encode('utf-8')).decode()
+                args.basic_auth.strip().encode('utf-8')
+            ).decode()
             logger.info('Requiring basic-auth')
-        ngus_server = ngus.NgusHTTPServer((args.hostname, args.port),
-                                          ngus.NgusBaseHTTPRequestHandler,
-                                          **server_params)
-        logger.info(f'Listening on {args.hostname}:{args.port}')
+        ngus_server = ngus.NgusHTTPServer(
+            (args.hostname, args.port),
+            ngus.NgusBaseHTTPRequestHandler,
+            **server_params,
+        )
+        if args.certfile and args.keyfile:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(
+                certfile=args.certfile, keyfile=args.keyfile
+            )
+            ngus_server.socket = context.wrap_socket(
+                ngus_server.socket, server_side=True
+            )
+        logger.info(
+            f'Listening on {args.hostname}:{args.port}'
+            f'{" (SSL/TLS)" if args.certfile and args.keyfile else ""}'
+        )
         logger.info('Done!')
         ngus_server.serve_forever()
     except KeyboardInterrupt:

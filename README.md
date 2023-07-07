@@ -31,8 +31,8 @@ To my amazement I wasn't able to find any free software matching that criteria.
 The main purpose of *ngus* is to accept file uploads as POST requests from an
 HTTP client.
 
-Currently *ngus* does not provide encryption (HTTPS) support. Many different
-tools can be employed to serve as an HTTPS proxy.
+Currently *ngus* provides only simple encryption (HTTPS) support. Many
+different tools can be employed to serve as an HTTPS proxy.
 
 See the examples bellow for more details!
 
@@ -49,7 +49,9 @@ See the examples bellow for more details!
 ### Gentoo
 
    ```bash
-   layman -a sgs
+   # add sgs' custom repository using app-eselect/eselect-repository
+   eselect repository add sgs
+
    emerge www-servers/ngus
    ```
 
@@ -107,6 +109,16 @@ The default form input field name is *ufile*. That can be changed by using the
    curl --basic -u uname -F "uploadfile=@myfile.zip" http://158.39.125.240:8080
    ```
 
+Simple encryption (HTTPS) support
+
+   ```bash
+   # creating a self-signed key / certificate pair valid for 356 days
+   openssl req -sha256 -newkey rsa:4096 -nodes -x509 -extensions v3_ca -subj "/C=NO/O=MyOrg/CN=uploads.myhostname.net" -days 365 -keyout uploads.myhostname.net.key.pem -out uploads.myhostname.net.cert.pem
+   python -m ngus -H 0.0.0.0 -p 8080 -b "uname:foo" -k uploads.myhostname.net.key.pem -c uploads.myhostname.net.cert.pem -u /home/s/uploads
+   # since the certificate is self-signed, it can serve as a CA to itself in this example
+   curl --basic -u uname -F "ufile=@myfile.zip" --cacert uploads.myhostname.net.cert.pem https://uploads.myhostname.net:8080
+   ```
+
 
 ### Using *nginx* as a proxy
 
@@ -138,7 +150,7 @@ described in the examples above.
 
       location / {
           # point at the ngus instance running on a private network address
-          proxy_pass http://192.168.1.240:8080/;
+          proxy_pass http://158.39.125.240:8080/;
       }
 
    }
